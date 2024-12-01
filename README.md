@@ -86,7 +86,7 @@ max_file_size = 10485760  # 10MB
 backup_count = 5
 log_dir = logs
 log_file_prefix = app
-date_format = %%Y%%m%%d
+date_format = %Y%m%d
 ```
 
 ### 界面文本
