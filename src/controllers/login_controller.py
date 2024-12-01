@@ -9,6 +9,7 @@ from utils.logger import get_logger
 from utils.config import get_config
 from views.login_window import LoginWindow
 from views.user_window import UserWindow
+from controllers.model_controller import ModelController
 
 
 class LoginController(QObject):
@@ -27,12 +28,15 @@ class LoginController(QObject):
         self.is_login_in_progress = False
         self.state_lock = Lock()
         
+        # 保存当前用户的token
+        self.current_utoken = None
+        
         # 窗口实例
         self.login_window = None
         self.user_window = None
         
         # 连接信号到槽
-        self.login_success.connect(self._create_user_window)
+        self.login_success.connect(self._on_login_success)
         
         # 创建并配置登录窗口
         self.setup_login_window()
@@ -93,6 +97,17 @@ class LoginController(QObject):
         self.logger.info("开始登录流程")
         self.login_window.set_status_text("正在启动登录流程...")
         
+        # TODO: 实现实际的登录流程
+        # 1. 检查本地是否有保存的登录状态（token）
+        # 2. 如果有，验证token是否有效
+        # 3. 如果token有效，直接进入已登录状态
+        # 4. 如果无效，再启动WebSocket服务器进行扫码登录
+        # 示例 API:
+        # GET /api/auth/check_token
+        # Headers: {
+        #     "Authorization": "Bearer {token}"
+        # }
+        
         # 在单独的线程中启动WebSocket服务器
         self.server_thread = Thread(target=self.run_websocket_server)
         self.server_thread.daemon = True
@@ -121,6 +136,21 @@ class LoginController(QObject):
                     try:
                         data = json.loads(message)
                         if 'utoken' in data:
+                            # TODO: 实现token验证和用户信息获取
+                            # 1. 验证token的合法性
+                            # 2. 获取用户基本信息
+                            # 3. 保存必要的用户数据
+                            # 4. 如果验证失败，通知用户重新登录
+                            # 示例 API:
+                            # POST /api/auth/verify_token
+                            # {
+                            #     "token": data['utoken']
+                            # }
+                            # GET /api/user/info
+                            # Headers: {
+                            #     "Authorization": "Bearer {token}"
+                            # }
+                            
                             self.logger.info("收到有效的utoken")
                             self.handle_login_success(data['utoken'])
                             return
@@ -149,7 +179,14 @@ class LoginController(QObject):
                 # 启动超时计时器
                 asyncio.create_task(connection_timeout())
                 
-                # 使用正确的WebSocket端口打开浏览器
+                # TODO: 实现实际的登录URL生成和处理
+                # 1. 生成包含必要参数的登录URL
+                # 2. 可能需要包含：
+                #    - 应用标识（client_id）
+                #    - 随机状态码（state）防止CSRF攻击
+                #    - 回调地址（redirect_uri）
+                #    - 权限范围（scope）
+                # 3. 考虑添加本地状态存储，用于验证回调
                 auth_server_url = self.config.get('WebSocket', 'auth_server_url', 'http://localhost:8000')
                 login_url = f"{auth_server_url}/login?ws_port={port}"
                 self.logger.debug(f"正在打开浏览器，URL: {login_url}")
@@ -161,7 +198,7 @@ class LoginController(QObject):
                 self.logger.error(error_msg)
                 self.login_window.set_status_text(error_msg)
                 self.reset_login_state()
-
+        
         try:
             self.logger.debug("创建新的事件循环")
             self.event_loop = asyncio.new_event_loop()
@@ -178,16 +215,28 @@ class LoginController(QObject):
     def handle_login_success(self, utoken):
         """处理登录成功"""
         self.logger.info("登录成功，发出创建用户窗口信号")
+        self.login_success.emit(utoken)
+    
+    def _on_login_success(self, utoken):
+        """登录成功后的处理"""
+        self.logger.info("登录成功，开始加载模型")
         self.login_window.set_status_text("登录成功！")
         self.is_login_in_progress = False
         
-        # 发出信号以创建用户窗口
-        self.login_success.emit(utoken)
+        # 保存token
+        self.current_utoken = utoken
+        
+        # 创建模型控制器并开始加载
+        self.model_controller = ModelController(self.login_window)
+        self.model_controller.model_load_complete.connect(self._on_model_load_complete)
+        self.model_controller.start_model_loading()
     
-    def _create_user_window(self, utoken):
-        """在主线程中创建用户窗口"""
-        self.logger.info("在主线程中创建用户窗口")
-        self.user_window = UserWindow(utoken)
+    def _on_model_load_complete(self):
+        """模型加载完成后的处理"""
+        self.logger.info("模型加载完成，创建用户窗口")
+        
+        # 创建并显示用户窗口
+        self.user_window = UserWindow(self.current_utoken)
         self.user_window.show()
         self.login_window.hide_window()
     

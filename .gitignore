@@ -1,4 +1,5 @@
 *.lock
 requirements.txt
-logs/
+logs/*.log
 __pycache__
+models/*.json
