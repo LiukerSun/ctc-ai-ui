@@ -26,23 +26,23 @@ class ModelController(QObject):
         self.model_dir = self.config.get("Model", "model_dir", "models")
         self.version_file = "version.json"  # 固定的版本文件名
         self.current_model = None  # 当前模型信息，从版本文件中读取
-        
+
         # 确保模型目录存在
         os.makedirs(self.model_dir, exist_ok=True)
 
         # 连接进度信号到槽
         self.progress_updated.connect(self._update_progress)
-        
+
     def _get_version_file_path(self):
         """获取版本文件的完整路径"""
         return os.path.join(self.model_dir, self.version_file)
-    
+
     def _get_model_file_path(self):
         """获取模型文件的完整路径"""
         if not self.current_model:
             return None
         return os.path.join(self.model_dir, self.current_model.get("model_name"))
-    
+
     def _read_local_version(self):
         """读取本地版本信息
         返回: (bool, dict) - (是否成功, 版本信息)
@@ -52,28 +52,28 @@ class ModelController(QObject):
             if not os.path.exists(version_file):
                 self.logger.info("版本文件不存在")
                 return False, None
-            
-            with open(version_file, 'r', encoding='utf-8') as f:
+
+            with open(version_file, "r", encoding="utf-8") as f:
                 version_info = json.load(f)
-                
+
             # 验证版本信息格式
-            required_fields = ['version', 'model_name', 'timestamp']
+            required_fields = ["version", "model_name", "timestamp"]
             if not all(field in version_info for field in required_fields):
                 self.logger.error("版本文件格式错误")
                 return False, None
-            
+
             # 更新当前模型信息
             self.current_model = version_info
             return True, version_info
-            
+
         except (json.JSONDecodeError, IOError) as e:
             self.logger.error(f"读取版本文件错误: {str(e)}")
             return False, None
-    
+
     def _save_version_info(self, version_info):
         """保存版本信息到文件"""
         try:
-            with open(self._get_version_file_path(), 'w', encoding='utf-8') as f:
+            with open(self._get_version_file_path(), "w", encoding="utf-8") as f:
                 json.dump(version_info, f, indent=4)
             # 更新当前模型信息
             self.current_model = version_info
@@ -121,44 +121,44 @@ class ModelController(QObject):
         返回: (bool, dict) - (是否需要更新, 最新版本信息)
         """
         self.logger.info("正在检查模型版本...")
-        
+
         # 读取本地版本信息
         local_success, local_version = self._read_local_version()
-        
+
         # TODO: 实现实际的版本检查逻辑
         # 1. 向服务器发送请求，获取最新版本信息
         await asyncio.sleep(1)  # 模拟网络请求
-        
+
         # 模拟服务器返回的新版本信息
         server_version = {
             "version": "1.0.0",
             "model_name": "model_1201.pt",
-            "timestamp": "2023-12-01T12:00:00Z"
+            "timestamp": "2023-12-01T12:00:00Z",
         }
-        
+
         # 如果本地版本读取失败，需要更新
         if not local_success:
             return True, server_version
-            
+
         # 比较版本
         return server_version["version"] != local_version["version"], server_version
 
     async def _download_model(self, version_info):
         """下载模型"""
         self.logger.info("开始下载模型...")
-        
+
         # TODO: 实现实际的模型下载逻辑
         # 1. 下载模型文件
         # 2. 验证文件完整性
         # 3. 保存到指定位置
         model_path = os.path.join(self.model_dir, version_info["model_name"])
-        
+
         # 模拟下载进度
         for i in range(0, 101, 10):
             await asyncio.sleep(1)
             self.progress_updated.emit(i)
             self.logger.info(f"下载进度：{i}%")
-        
+
         # 保存版本信息
         if self._save_version_info(version_info):
             self.logger.info(f"模型已保存到: {model_path}")

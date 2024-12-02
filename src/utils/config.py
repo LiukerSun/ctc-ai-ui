@@ -22,14 +22,14 @@ class Config:
         """加载配置文件"""
         config_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            'config',
-            'config.ini'
+            "config",
+            "config.ini",
         )
-        
+
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"配置文件未找到: {config_path}")
-        
-        self._config.read(config_path, encoding='utf-8')
+
+        self._config.read(config_path, encoding="utf-8")
 
     def get(self, section: str, key: str, fallback: Any = None) -> Optional[str]:
         """获取配置值"""
@@ -39,11 +39,15 @@ class Config:
         """获取整数配置值"""
         return self._config.getint(section, key, fallback=fallback)
 
-    def getfloat(self, section: str, key: str, fallback: float = None) -> Optional[float]:
+    def getfloat(
+        self, section: str, key: str, fallback: float = None
+    ) -> Optional[float]:
         """获取浮点数配置值"""
         return self._config.getfloat(section, key, fallback=fallback)
 
-    def getboolean(self, section: str, key: str, fallback: bool = None) -> Optional[bool]:
+    def getboolean(
+        self, section: str, key: str, fallback: bool = None
+    ) -> Optional[bool]:
         """获取布尔配置值"""
         return self._config.getboolean(section, key, fallback=fallback)
 
